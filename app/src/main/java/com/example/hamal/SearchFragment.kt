@@ -14,7 +14,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.ResponseBody
 import java.io.File
 import java.io.InputStream
 
@@ -22,7 +21,6 @@ class SearchFragment : Fragment() {
 
     private lateinit var binding: FragmentSearchBinding
     private lateinit var api: ApiService
-    //private val api: ApiService = (activity as MainActivity).api
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
