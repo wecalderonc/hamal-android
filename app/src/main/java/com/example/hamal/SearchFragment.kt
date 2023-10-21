@@ -45,8 +45,8 @@ class SearchFragment : Fragment() {
             try {
                 val results = api.searchYoutube(query)
                 withContext(Dispatchers.Main) {
-                    val adapter = ResultsAdapter(results) { videoResult ->
-                        onDownloadClicked(videoResult)
+                    val adapter = ResultsAdapter(results) { videoResult, callback ->
+                        onDownloadClicked(videoResult, callback)
                     }
                     binding.recyclerViewResults.adapter = adapter
                 }
@@ -59,7 +59,7 @@ class SearchFragment : Fragment() {
         }
     }
 
-    private fun onDownloadClicked(videoResult: VideoResult) {
+    private fun onDownloadClicked(videoResult: VideoResult, callback: (Boolean) -> Unit) {
         Log.d("SearchFragment", "videoUrl: ${videoResult.url}")
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -68,10 +68,16 @@ class SearchFragment : Fragment() {
                 val file = api.downloadVideo(requestBody)
                 saveFileToStorage(file.byteStream(), "${videoResult.title}.mp3")
                 Log.d("SearchFragment", "After API call")
+                withContext(Dispatchers.Main) {
+                    callback(true)
+                }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     Log.e("SearchFragment", "Error downloading: ${e.message}", e)
                     Toast.makeText(context, "Error downloading file", Toast.LENGTH_SHORT).show()
+                    withContext(Dispatchers.Main) {
+                        callback(false)
+                    }
                 }
             }
         }

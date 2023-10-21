@@ -9,13 +9,14 @@ import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import java.io.File
 
 class ResultsAdapter(
     private val results: List<VideoResult>,
-    private val onDownloadClicked: (VideoResult) -> Unit
+    private val onDownloadClicked: (VideoResult, (Boolean) -> Unit) -> Unit
 ) : RecyclerView.Adapter<ResultsAdapter.ViewHolder>() {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -43,8 +44,27 @@ class ResultsAdapter(
 
         holder.downloadIcon.setOnClickListener {
             hideSoftKeyboard(it.context as Activity)
-            onDownloadClicked(videoResult)
-            holder.playButton.visibility = View.VISIBLE
+
+            // Hide the download and play buttons
+            holder.downloadIcon.visibility = View.GONE
+            holder.playButton.visibility = View.GONE
+
+            // Show the progress bar
+            val loadingProgressBar: ProgressBar = holder.itemView.findViewById(R.id.loadingProgressBar)
+            loadingProgressBar.visibility = View.VISIBLE
+
+            // Trigger the download
+            onDownloadClicked(videoResult) { success ->
+                // Callback: executed when download finishes (success or failure)
+                loadingProgressBar.visibility = View.GONE
+                if (success) { // if download succeeded
+                    holder.playButton.visibility = View.VISIBLE
+                } else { // if download failed
+                    holder.downloadIcon.visibility = View.VISIBLE
+                }
+            }
+            //holder.playButton.visibility = View.VISIBLE
+
         }
 
         holder.playButton.setOnClickListener {
