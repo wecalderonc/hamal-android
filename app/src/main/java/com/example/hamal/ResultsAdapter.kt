@@ -1,10 +1,14 @@
 package com.example.hamal
 
+import android.app.Activity
+import android.content.Context
 import android.media.MediaPlayer
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import java.io.File
@@ -16,8 +20,8 @@ class ResultsAdapter(
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val titleTextView: TextView = view.findViewById(R.id.titleTextView)
-        val downloadButton: Button = view.findViewById(R.id.downloadButton)
-        val playButton: Button = view.findViewById(R.id.playButton)
+        val downloadIcon: ImageView = view.findViewById(R.id.downloadIcon)
+        val playButton: ImageView = view.findViewById(R.id.playButton)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -29,36 +33,46 @@ class ResultsAdapter(
         val videoResult = results[position]
         holder.titleTextView.text = videoResult.title
 
-        holder.downloadButton.setOnClickListener {
+        // Check if file is downloaded
+        val file = File(holder.playButton.context.getExternalFilesDir(null), "${videoResult.title}.mp3")
+        if (file.exists()) {
+            holder.playButton.visibility = View.VISIBLE
+        } else {
+            holder.playButton.visibility = View.GONE
+        }
+
+        holder.downloadIcon.setOnClickListener {
+            hideSoftKeyboard(it.context as Activity)
             onDownloadClicked(videoResult)
             holder.playButton.visibility = View.VISIBLE
         }
 
         holder.playButton.setOnClickListener {
-            if (holder.playButton.text == "Play") {
-                playDownloadedFile(holder.playButton.context, videoResult.title, holder.playButton)
-            } else {
+            hideSoftKeyboard(it.context as Activity)
+            if (currentMediaPlayer?.isPlaying == true && currentPlayButton == holder.playButton) {
                 currentMediaPlayer?.pause()
-                holder.playButton.text = "Play"
+                holder.playButton.setImageResource(R.drawable.ic_play) // Set Play icon
+            } else {
+                playDownloadedFile(holder.playButton.context, videoResult.title, holder.playButton)
             }
         }
     }
 
     private var currentMediaPlayer: MediaPlayer? = null
-    private var currentPlayButton: Button? = null
+    private var currentPlayButton: ImageView? = null
 
-    private fun playDownloadedFile(context: android.content.Context, title: String, playButton: Button) {
+    private fun playDownloadedFile(context: android.content.Context, title: String, playButton: ImageView) {
         val file = File(context.getExternalFilesDir(null), "$title.mp3")
         if (file.exists()) {
             if (currentMediaPlayer?.isPlaying == true) {
                 currentMediaPlayer?.pause()
-                currentPlayButton?.text = "Play"
+                currentPlayButton?.setImageResource(R.drawable.ic_play) // Set Play icon
                 if (currentPlayButton == playButton) {
                     return
                 }
             } else if (currentPlayButton == playButton) {
                 currentMediaPlayer?.start()
-                playButton.text = "Pause"
+                playButton.setImageResource(R.drawable.ic_pause) // Set Pause icon
                 return
             }
 
@@ -69,17 +83,22 @@ class ResultsAdapter(
                 start()
             }
             currentPlayButton = playButton
-            playButton.text = "Pause"
+            playButton.setImageResource(R.drawable.ic_pause) // Set Pause icon
 
             currentMediaPlayer?.setOnCompletionListener {
                 it.release()
-                playButton.text = "Play"
+                playButton.setImageResource(R.drawable.ic_play) // Set Play icon
                 currentMediaPlayer = null
                 currentPlayButton = null
             }
         }
     }
 
-
     override fun getItemCount() = results.size
+
+    fun hideSoftKeyboard(activity: Activity) {
+        val inputMethodManager = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        val view = activity.currentFocus ?: View(activity)
+        inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
+    }
 }

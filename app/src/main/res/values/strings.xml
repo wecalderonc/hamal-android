@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Hamal</string>
+    <string name="download_icon_description">download_icon</string>
 </resources>

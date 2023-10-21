@@ -50,6 +50,5 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation 'androidx.viewpager2:viewpager2:1.0.0'
-    implementation 'com.google.android.material:material:1.5.0' // Version might change, ensure to get the latest one
-    implementation("com.android.support:appcompat-v7:23.2.0")
+    implementation 'com.google.android.material:material:1.5.0' // Version might change, ensure to get the latest on
 }
