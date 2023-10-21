@@ -2,15 +2,13 @@ package com.example.hamal
 
 import android.media.MediaPlayer
 import android.os.Bundle
-import android.util.Log
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.Lifecycle
+import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.example.hamal.databinding.ActivityMainBinding
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.google.android.material.tabs.TabLayoutMediator
 import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
 import retrofit2.Retrofit
@@ -19,27 +17,26 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Query
-import java.io.File
-import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
-    private var mediaPlayer: MediaPlayer? = null
     private lateinit var binding: ActivityMainBinding
+    private var mediaPlayer: MediaPlayer? = null
+    val api: ApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl("http://10.0.2.2:3000/")
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ApiService::class.java)
+    }
 
     private val okHttpClient = OkHttpClient.Builder()
-        .readTimeout(2, TimeUnit.MINUTES)  // Adjust the timeout as needed
+        .readTimeout(2, TimeUnit.MINUTES)
         .writeTimeout(2, TimeUnit.MINUTES)
         .connectTimeout(2, TimeUnit.MINUTES)
         .build()
-
-    private val api = Retrofit.Builder()
-        .baseUrl("http://10.0.2.2:3000/")
-        .client(okHttpClient)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-        .create(ApiService::class.java)
 
     override fun onDestroy() {
         super.onDestroy()
@@ -47,71 +44,35 @@ class MainActivity : AppCompatActivity() {
         mediaPlayer = null
     }
 
+    class ViewPagerAdapter(fragmentManager: FragmentManager, lifecycle: Lifecycle) : FragmentStateAdapter(fragmentManager, lifecycle) {
+
+        override fun getItemCount(): Int = 2
+
+        override fun createFragment(position: Int): Fragment {
+            return when (position) {
+                0 -> SearchFragment()
+                1 -> DownloadsFragment()
+                else -> throw IllegalStateException("Invalid position $position")
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.recyclerViewResults.layoutManager = LinearLayoutManager(this)
-
-        binding.buttonSearch.setOnClickListener {
-            onSearchClicked()
-        }
-    }
-
-    private fun onSearchClicked() {
-        Log.d("MainActivity", "Search button clicked")
-        val query = binding.editTextSearch.text.toString()
-
-        CoroutineScope(Dispatchers.IO).launch {
-
-            try {
-                val results = api.searchYoutube(query)
-                withContext(Dispatchers.Main) {
-                    val adapter = ResultsAdapter(results) { videoResult ->
-                        onDownloadClicked(videoResult)
-                    }
-                    binding.recyclerViewResults.adapter = adapter
-                    binding.recyclerViewResults.invalidate()
-
-                }
-            } catch (e: Exception) {
-
-                withContext(Dispatchers.Main) {
-                    Log.e("MainActivity", "Error fetching results: ${e.message}", e)
-                    Toast.makeText(this@MainActivity, "Error fetching results", Toast.LENGTH_SHORT).show()
-                }
+        binding.viewPager.adapter = ViewPagerAdapter(supportFragmentManager, lifecycle)
+        TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
+            tab.text = when (position) {
+                0 -> "Search"
+                1 -> "Downloads"
+                else -> throw IllegalStateException("Invalid position $position")
             }
-        }
-    }
-
-    private fun onDownloadClicked(videoResult: VideoResult) {
-        Log.d("MainActivity", "videoUrl: ${videoResult.url}")
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val requestBody = DownloadRequestBody(videoResult.url, videoResult.title)
-                Log.d("MainActivity", "Before API call")
-                val file = api.downloadVideo(requestBody)
-                //val response = api.downloadVideo(requestBody)
-                saveFileToStorage(file.byteStream(), "${videoResult.title}.mp3")
-                Log.d("MainActivity", "After API call")
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Log.e("MainActivity", "Error downloading: ${e.message}", e)
-                    Toast.makeText(this@MainActivity, "Error downloading file", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
-    private fun saveFileToStorage(inputStream: InputStream, filename: String) {
-        val file = File(getExternalFilesDir(null), filename)
-        file.outputStream().use { fileOut ->
-            inputStream.copyTo(fileOut)
-        }
+        }.attach()
     }
 }
+
 
 interface ApiService {
     @GET("youtube_search/search")
