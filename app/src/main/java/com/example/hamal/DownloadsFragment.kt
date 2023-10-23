@@ -37,7 +37,7 @@ class DownloadsFragment : Fragment() {
         val downloadsDir = context?.getExternalFilesDir(null)
         val files = downloadsDir?.listFiles { _, name -> name.endsWith(".mp3") }?.toList() ?: listOf()
 
-        adapter = DownloadedFilesAdapter(files)
+        adapter = DownloadedFilesAdapter(files, this@DownloadsFragment.activity as OnAudioControlListener)
         recyclerView.adapter = adapter
     }
 }

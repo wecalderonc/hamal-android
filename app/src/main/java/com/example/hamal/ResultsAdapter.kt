@@ -2,12 +2,10 @@ package com.example.hamal
 
 import android.app.Activity
 import android.content.Context
-import android.media.MediaPlayer
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -16,7 +14,8 @@ import java.io.File
 
 class ResultsAdapter(
     private val results: List<VideoResult>,
-    private val onDownloadClicked: (VideoResult, (Boolean) -> Unit) -> Unit
+    private val onDownloadClicked: (VideoResult, (Boolean) -> Unit) -> Unit,
+    private val audioControlListener: OnAudioControlListener
 ) : RecyclerView.Adapter<ResultsAdapter.ViewHolder>() {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -57,66 +56,32 @@ class ResultsAdapter(
             onDownloadClicked(videoResult) { success ->
                 // Callback: executed when download finishes (success or failure)
                 loadingProgressBar.visibility = View.GONE
-                if (success) { // if download succeeded
+                if (success) {
                     holder.playButton.visibility = View.VISIBLE
-                } else { // if download failed
+                } else {
                     holder.downloadIcon.visibility = View.VISIBLE
                 }
             }
-            //holder.playButton.visibility = View.VISIBLE
-
         }
 
         holder.playButton.setOnClickListener {
             hideSoftKeyboard(it.context as Activity)
-            if (currentMediaPlayer?.isPlaying == true && currentPlayButton == holder.playButton) {
-                currentMediaPlayer?.pause()
-                holder.playButton.setImageResource(R.drawable.ic_play) // Set Play icon
+            val filePath = file.path
+
+            if (currentPlayButton == holder.playButton) {
+                audioControlListener.onPauseRequested()
             } else {
-                playDownloadedFile(holder.playButton.context, videoResult.title, holder.playButton)
+                audioControlListener.onPlayRequested(filePath)
+                currentPlayButton = holder.playButton
             }
         }
     }
 
-    private var currentMediaPlayer: MediaPlayer? = null
     private var currentPlayButton: ImageView? = null
-
-    private fun playDownloadedFile(context: android.content.Context, title: String, playButton: ImageView) {
-        val file = File(context.getExternalFilesDir(null), "$title.mp3")
-        if (file.exists()) {
-            if (currentMediaPlayer?.isPlaying == true) {
-                currentMediaPlayer?.pause()
-                currentPlayButton?.setImageResource(R.drawable.ic_play) // Set Play icon
-                if (currentPlayButton == playButton) {
-                    return
-                }
-            } else if (currentPlayButton == playButton) {
-                currentMediaPlayer?.start()
-                playButton.setImageResource(R.drawable.ic_pause) // Set Pause icon
-                return
-            }
-
-            currentMediaPlayer?.release()
-            currentMediaPlayer = MediaPlayer().apply {
-                setDataSource(file.path)
-                prepare()
-                start()
-            }
-            currentPlayButton = playButton
-            playButton.setImageResource(R.drawable.ic_pause) // Set Pause icon
-
-            currentMediaPlayer?.setOnCompletionListener {
-                it.release()
-                playButton.setImageResource(R.drawable.ic_play) // Set Play icon
-                currentMediaPlayer = null
-                currentPlayButton = null
-            }
-        }
-    }
 
     override fun getItemCount() = results.size
 
-    fun hideSoftKeyboard(activity: Activity) {
+    private fun hideSoftKeyboard(activity: Activity) {
         val inputMethodManager = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         val view = activity.currentFocus ?: View(activity)
         inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)

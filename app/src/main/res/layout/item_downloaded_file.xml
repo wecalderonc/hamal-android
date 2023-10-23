@@ -11,10 +11,11 @@
         android:layout_weight="1"
         android:text="File Name" />
 
-    <Button
+    <ImageView
         android:id="@+id/playButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Play" />
+        android:src="@drawable/ic_play"
+        android:contentDescription="Play audio" />
 
 </LinearLayout>

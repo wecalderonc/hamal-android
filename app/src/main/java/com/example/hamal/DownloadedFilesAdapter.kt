@@ -4,21 +4,22 @@ import android.media.MediaPlayer
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import java.io.File
 
 class DownloadedFilesAdapter(
-    private val files: List<File>
+    private val files: List<File>,
+    private val audioControlListener: OnAudioControlListener
 ) : RecyclerView.Adapter<DownloadedFilesAdapter.ViewHolder>() {
 
     private var currentMediaPlayer: MediaPlayer? = null
-    private var currentPlayButton: Button? = null
+    private var currentPlayButton: ImageView? = null
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val titleTextView: TextView = view.findViewById(R.id.titleTextView)
-        val playButton: Button = view.findViewById(R.id.playButton)
+        val playButton: ImageView = view.findViewById(R.id.playButton)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -31,42 +32,14 @@ class DownloadedFilesAdapter(
         holder.titleTextView.text = file.nameWithoutExtension
 
         holder.playButton.setOnClickListener {
-            if (holder.playButton.text == "Play") {
-                playDownloadedFile(file, holder.playButton)
+            val filePath = file.path
+
+            if (currentPlayButton == holder.playButton) {
+                audioControlListener.onPauseRequested()
             } else {
-                currentMediaPlayer?.pause()
-                holder.playButton.text = "Play"
+                audioControlListener.onPlayRequested(filePath)
+                currentPlayButton = holder.playButton
             }
-        }
-    }
-
-    private fun playDownloadedFile(file: File, playButton: Button) {
-        if (currentMediaPlayer?.isPlaying == true) {
-            currentMediaPlayer?.pause()
-            currentPlayButton?.text = "Play"
-            if (currentPlayButton == playButton) {
-                return
-            }
-        } else if (currentPlayButton == playButton) {
-            currentMediaPlayer?.start()
-            playButton.text = "Pause"
-            return
-        }
-
-        currentMediaPlayer?.release()
-        currentMediaPlayer = MediaPlayer().apply {
-            setDataSource(file.path)
-            prepare()
-            start()
-        }
-        currentPlayButton = playButton
-        playButton.text = "Pause"
-
-        currentMediaPlayer?.setOnCompletionListener {
-            it.release()
-            playButton.text = "Play"
-            currentMediaPlayer = null
-            currentPlayButton = null
         }
     }
 

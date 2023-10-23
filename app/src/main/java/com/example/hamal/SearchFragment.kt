@@ -45,9 +45,11 @@ class SearchFragment : Fragment() {
             try {
                 val results = api.searchYoutube(query)
                 withContext(Dispatchers.Main) {
-                    val adapter = ResultsAdapter(results) { videoResult, callback ->
-                        onDownloadClicked(videoResult, callback)
-                    }
+                    val adapter = ResultsAdapter(results, { videoResult, callback ->
+                        onDownloadClicked(videoResult) { success ->
+                            callback(success)
+                        }
+                    }, this@SearchFragment.activity as OnAudioControlListener)
                     binding.recyclerViewResults.adapter = adapter
                 }
             } catch (e: Exception) {

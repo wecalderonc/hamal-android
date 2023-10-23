@@ -2,6 +2,12 @@ package com.example.hamal
 
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.SeekBar
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -19,10 +25,19 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 import java.util.concurrent.TimeUnit
 
-class MainActivity : AppCompatActivity() {
+interface OnAudioControlListener {
+    fun onPlayRequested(filePath: String)
+    fun onPauseRequested()
+}
+
+class MainActivity : AppCompatActivity(), OnAudioControlListener {
 
     private lateinit var binding: ActivityMainBinding
     private var mediaPlayer: MediaPlayer? = null
+    private lateinit var bottomPlayerLayout: LinearLayout
+    private lateinit var playPauseButton: ImageButton
+    private lateinit var progressSeekBar: SeekBar
+
     val api: ApiService by lazy {
         Retrofit.Builder()
             .baseUrl("http://10.0.2.2:3000/")
@@ -45,7 +60,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     class ViewPagerAdapter(fragmentManager: FragmentManager, lifecycle: Lifecycle) : FragmentStateAdapter(fragmentManager, lifecycle) {
-
         override fun getItemCount(): Int = 2
 
         override fun createFragment(position: Int): Fragment {
@@ -62,6 +76,10 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        bottomPlayerLayout = findViewById(R.id.layoutBottomPlayer)
+        playPauseButton = bottomPlayerLayout.findViewById(R.id.playPauseButton)
+        progressSeekBar = bottomPlayerLayout.findViewById(R.id.progressSeekBar)
+
         binding.viewPager.adapter = ViewPagerAdapter(supportFragmentManager, lifecycle)
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
             tab.text = when (position) {
@@ -70,9 +88,96 @@ class MainActivity : AppCompatActivity() {
                 else -> throw IllegalStateException("Invalid position $position")
             }
         }.attach()
+
+        mediaPlayer = MediaPlayer()
+        mediaPlayer!!.setOnCompletionListener {
+            playPauseButton.setBackgroundResource(R.drawable.ic_play)
+        }
+
+        playPauseButton.setOnClickListener {
+            if (mediaPlayer!!.isPlaying) {
+                mediaPlayer!!.pause()
+                playPauseButton.setBackgroundResource(R.drawable.ic_play)
+                handler.removeCallbacks(updateSeekBarRunnable)
+            } else {
+                mediaPlayer!!.start()
+                playPauseButton.setBackgroundResource(R.drawable.ic_pause)
+                handler.postDelayed(updateSeekBarRunnable, 1000)
+            }
+        }
+
+        progressSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    mediaPlayer!!.seekTo(progress)
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+    }
+
+    val handler = Handler(Looper.getMainLooper())
+
+    private val updateSeekBarRunnable = object : Runnable {
+        override fun run() {
+            if (mediaPlayer?.isPlaying == true) {
+                val currentPosition = mediaPlayer?.currentPosition!!
+                progressSeekBar.progress = currentPosition
+
+                val elapsedTimeTextView: TextView = findViewById(R.id.elapsedTime)
+                // Si tienes un TextView para el tiempo transcurrido, actualízalo aquí
+                elapsedTimeTextView.text = convertDuration(currentPosition)
+                handler.postDelayed(this, 1000)
+            }
+        }
+    }
+
+    private fun playAudio(filePath: String) {
+        if (mediaPlayer?.isPlaying == true) {
+            mediaPlayer!!.reset()
+        }
+        mediaPlayer?.setDataSource(filePath)
+        mediaPlayer?.prepare()
+        // Establecer el valor máximo para la SeekBar.
+        val maxDuration = mediaPlayer?.duration ?: 0
+        progressSeekBar.max = maxDuration
+
+        // Actualizar el TextView para mostrar la duración total del audio.
+        val trackTimeTextView: TextView = findViewById(R.id.trackTime)
+        trackTimeTextView.text = convertDuration(maxDuration)
+        mediaPlayer?.start()
+
+        playPauseButton.setBackgroundResource(R.drawable.ic_pause)
+
+        handler.removeCallbacks(updateSeekBarRunnable)  // Elimina cualquier instancia previa
+        handler.postDelayed(updateSeekBarRunnable, 1000)
+    }
+
+    private fun pauseAudio() {
+        if (mediaPlayer?.isPlaying == true) {
+            mediaPlayer!!.pause()
+            playPauseButton.setBackgroundResource(R.drawable.ic_play)
+        }
+        handler.removeCallbacks(updateSeekBarRunnable)
+    }
+
+    override fun onPlayRequested(filePath: String) {
+        playAudio(filePath)
+    }
+
+    override fun onPauseRequested() {
+        pauseAudio()
+    }
+
+    private fun convertDuration(duration: Int): String {
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(duration.toLong()).toInt()
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(duration.toLong()).toInt() % 60
+        return String.format("%02d:%02d", minutes, seconds)
     }
 }
-
 
 interface ApiService {
     @GET("youtube_search/search")
@@ -83,5 +188,4 @@ interface ApiService {
 }
 
 data class VideoResult(val title: String, val url: String)
-
 data class DownloadRequestBody(val url: String, val title: String)
