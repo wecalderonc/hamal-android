@@ -16,6 +16,7 @@ class DownloadedFilesAdapter(
 
     private var currentMediaPlayer: MediaPlayer? = null
     private var currentPlayButton: ImageView? = null
+    private var currentlyPlayingFile: File? = null
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val titleTextView: TextView = view.findViewById(R.id.titleTextView)
@@ -31,15 +32,27 @@ class DownloadedFilesAdapter(
         val file = files[position]
         holder.titleTextView.text = file.nameWithoutExtension
 
+        // Actualiza el ícono del botón en función del estado de reproducción
+        if (currentlyPlayingFile == file) {
+            holder.playButton.setImageResource(R.drawable.ic_pause)
+        } else {
+            holder.playButton.setImageResource(R.drawable.ic_play)
+        }
+
         holder.playButton.setOnClickListener {
             val filePath = file.path
 
-            if (currentPlayButton == holder.playButton) {
+            if (currentlyPlayingFile == file) {
                 audioControlListener.onPauseRequested()
+                currentlyPlayingFile = null
+                holder.playButton.setImageResource(R.drawable.ic_play)
             } else {
                 audioControlListener.onPlayRequested(filePath)
-                currentPlayButton = holder.playButton
+                currentlyPlayingFile = file
+                holder.playButton.setImageResource(R.drawable.ic_pause)
             }
+
+            notifyDataSetChanged()  // Esto actualizará todos los elementos para asegurarse de que sólo un botón muestra el ícono de pausa
         }
     }
 

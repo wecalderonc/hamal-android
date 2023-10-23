@@ -22,6 +22,7 @@ class ResultsAdapter(
         val titleTextView: TextView = view.findViewById(R.id.titleTextView)
         val downloadIcon: ImageView = view.findViewById(R.id.downloadIcon)
         val playButton: ImageView = view.findViewById(R.id.playButton)
+        var isPlaying: Boolean = false
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -39,6 +40,12 @@ class ResultsAdapter(
             holder.playButton.visibility = View.VISIBLE
         } else {
             holder.playButton.visibility = View.GONE
+        }
+
+        if (holder.isPlaying) {
+            holder.playButton.setImageResource(R.drawable.ic_pause)  // Cambia al ícono de "Pause"
+        } else {
+            holder.playButton.setImageResource(R.drawable.ic_play)  // Cambia al ícono de "Play"
         }
 
         holder.downloadIcon.setOnClickListener {
@@ -68,11 +75,14 @@ class ResultsAdapter(
             hideSoftKeyboard(it.context as Activity)
             val filePath = file.path
 
-            if (currentPlayButton == holder.playButton) {
+            if (holder.isPlaying) {
                 audioControlListener.onPauseRequested()
+                holder.isPlaying = false  // Actualiza el estado
+                holder.playButton.setImageResource(R.drawable.ic_play)  // Cambia al ícono de "Play"
             } else {
                 audioControlListener.onPlayRequested(filePath)
-                currentPlayButton = holder.playButton
+                holder.isPlaying = true  // Actualiza el estado
+                holder.playButton.setImageResource(R.drawable.ic_pause)  // Cambia al ícono de "Pause"
             }
         }
     }

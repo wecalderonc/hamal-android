@@ -136,7 +136,7 @@ class MainActivity : AppCompatActivity(), OnAudioControlListener {
     }
 
     private fun playAudio(filePath: String) {
-        if (mediaPlayer?.isPlaying == true) {
+        if (mediaPlayer?.isPlaying == true || mediaPlayer?.isPlaying == false) {
             mediaPlayer!!.reset()
         }
         mediaPlayer?.setDataSource(filePath)
